@@ -1,3 +1,4 @@
+from typing import List
 class Solution:
     def setZeroes(self, matrix: List[List[int]]) -> None:
         """
@@ -56,4 +57,5 @@ AI Commentary
 1) Remove extra marker # and can be replaced with zero 
 2) set boolean flags (first row and first column) with any generator approach
 3) row assignement of zeroes can be done as matrix[i] = [0]*n(cleaner)
+4) Raises pylance issues needs to be fixed
 """

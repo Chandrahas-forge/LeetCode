@@ -49,7 +49,4 @@ Output:
 2. A simple improvement uses O(m + n) extra space, but still not the best solution.
 3. Can you devise a **constant space** solution?
 
-## Notes
-- Think carefully about how to mark rows and columns without using additional storage.
-- Consider using the first row and column of the matrix itself as markers.
 
