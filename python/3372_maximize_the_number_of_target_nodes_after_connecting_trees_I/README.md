@@ -35,43 +35,6 @@ Input:
 
 Output: [9, 7, 9, 8, 8]
 
-Explanation (one optimal choice per node):
-
-Node i (Tree A)
-
-Added edge (A ↔ B)
-
-#targets to i
-
-0
-
-0 ↔ 0
-
-9
-
-1
-
-1 ↔ 0
-
-7
-
-2
-
-2 ↔ 4
-
-9
-
-3
-
-3 ↔ 4
-
-8
-
-4
-
-4 ↔ 4
-
-8
 
 Example 2
 
@@ -81,8 +44,6 @@ Input:
   k = 1
 
 Output: [6, 3, 3, 3, 3]
-
-For each i we may connect any node of Tree A to any node of Tree B; the optimum values are shown above.
 
 Constraints
 

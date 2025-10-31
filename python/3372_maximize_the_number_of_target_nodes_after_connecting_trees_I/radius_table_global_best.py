@@ -72,92 +72,96 @@ class Solution:
         return k_count_graph_1
 
 
+
 """
-AI COMMENTARY
+AI Commentary and Refactoring Notes
+===================================
 
-Part A – Refactoring Prompts for the Existing Code
-Naming & Structure
-Could the helper get_k_distance_nodes_count be renamed dfs_count_within_k and nested inside get_k_count to narrow its scope?
-Would returning both n and graph from make_graph still be necessary if we already know n = len(graph) later?
+This guide highlights potential improvements to naming, structure, style,
+and algorithmic efficiency in the current implementation. Use it as a
+checklist when revisiting or rewriting the solution.
 
-Functional Style vs. Imperative
-What advantages might we gain by replacing the explicit for … append pattern in get_k_count with a list-comprehension?
-Should we use enumerate to avoid the manual index variable when looping through nodes?
+Part A — Code Quality & Refactoring
+-----------------------------------
 
-Early Exits & Guard Clauses
-Is it clearer to handle the trivial cases (k == 0 or k == -1) with an early return instead of running DFS?
+1. Naming & Structure
+   • Consider renaming `get_k_distance_nodes_count` to `dfs_count_within_k`
+     and nesting it inside `get_k_count` to narrow its scope.
+   • Re-evaluate whether returning both `n` and `graph` from `make_graph`
+     is necessary, since `n = len(graph)` can be inferred later.
 
-Type Hints & Imports
-Would adding full type annotations—including return types for every helper—help static checkers catch bugs?
-Should we import Deque from collections or stay with recursion given Python’s recursion-limit constraints?
+2. Functional Style vs. Imperative
+   • Some `for` loops that build lists could be replaced with list
+     comprehensions for clarity and conciseness.
+   • `enumerate` may improve readability when looping with indices.
 
-Recursion vs. Iteration
-Could converting the DFS to an explicit stack avoid deep-recursion risks on skewed trees (≤ 1000 nodes but still…)?
+3. Early Exits
+   • Handle trivial cases (e.g., `k == 0` or `k < 0`) with early returns
+     instead of entering DFS.
 
-Mutable Defaults & Constants
-Is it worth defining a K_TOO_FAR = k + 1 local constant to avoid recalculating k + 1 repeatedly?
+4. Type Hints & Imports
+   • Add full type annotations (parameters and return types) to support
+     static analysis.
+   • Consider using `deque` or iterative DFS to avoid deep recursion.
 
-Docstrings & Comments
-Would separating the example / proof discussion into a module-level docstring keep maxTargetNodes’s docstring concise and focused?
+5. Recursion vs. Iteration
+   • Converting recursive DFS to an explicit stack may prevent recursion‐
+     limit issues on skewed trees.
 
-PEP 8 Formatting
-Should blank lines be added between top-level methods to respect the “two-blank-lines” rule?
-Do variable names such as max_to_add read better as bridge_bonus?
+6. Constants & Repeated Expressions
+   • Define a local constant (e.g., `MAX_DIST = k + 1`) to avoid repeated
+     computation.
 
-Logging vs. print
-Is a debug logger preferable to the unconditional print(k_count) in get_k_count?
+7. Documentation & Comments
+   • Example or proof discussions may be better placed in a module-level
+     docstring, keeping function docstrings concise and practical.
 
-Return Value Mutation
-Would a list-comprehension ([a + max_to_add for a in k_count_graph_1]) be clearer than the in-place for loop?
+8. Formatting & PEP-8
+   • Ensure two blank lines between top-level function definitions.
+   • Evaluate whether variable names like `max_to_add` could be made more
+     descriptive, e.g., `bridge_bonus`.
 
-Part B – Algorithmic Alternatives & Design Trade-offs
-Single-Pass Tree DP
-How would a bottom-up + top-down DP (two DFS passes) compute “nodes within distance ≤ k” for all sources in O(n k) instead of n separate DFS?
-What memory trade-off arises when we keep per-depth histograms for each subtree?
+9. Logging vs. Print
+   • Replace diagnostic `print` statements with a configurable logger.
 
-Centroid Decomposition
-Could decomposing the tree into centroid layers allow O(n log n + n k) preprocessing, and does that outperform the current approach for k ≪ n?
-How does implementation complexity compare?
+10. Return Value Mutation
+   • Consider replacing in-place updates with clearer constructs, e.g.,
+     `result = [x + bonus for x in counts]`.
 
-Bit-Mask Convolution
-With n ≤ 1000, can we pack each depth profile into a Python int and use bit-shift OR to merge children in ~
-𝑘
-/
-64
-k/64 ops—worthwhile or premature optimisation?
+Part B — Algorithmic Alternatives & Design Trade-offs
+-----------------------------------------------------
 
-Mo’s Algorithm on Trees
-If we had to answer the query for many different k values, would an Euler-tour + Mo’s offline algorithm be more scalable?
-How large must q be before the overhead beats the simplicity of per-k DFS?
+1. Two-Pass Tree DP
+   • A bottom-up and top-down DP approach could compute counts of nodes
+     within distance ≤ k for all roots in `O(n·k)` instead of performing
+     DFS from every node.
 
-APSP Overkill
-Does computing all-pairs shortest paths via tree DP (or even Floyd-Warshall for illustration) make sense here, or is its 
-𝑂
-(
-𝑛
-2
-)
-O(n 
-2
- ) cost unjustified?
+2. Centroid Decomposition
+   • Decomposing the tree into centroids yields `O(n log n + n·k)` runtime,
+     with increased implementation complexity but improved scaling when
+     `k ≪ n`.
 
-Bridge Choice Logic
-Is the “global max (k-1) count in Tree B” always optimal? Under what tree shapes could linking to a non-maximising node ever help a specific source in Tree A?
-How would you craft a proof-by-contradiction to settle this?
+3. Bitmask Convolution
+   • Depth-frequency arrays may be represented as bitmasks, allowing depth
+     merges via bit shifting (≈ `k/64` operations). Potentially useful if
+     performance is critical.
 
-Space vs. Time
-Given the constraints, is the current 
-𝑂
-(
-(
-𝑛
-+
-𝑚
-)
-⋅
-𝑘
-)
-O((n+m)⋅k) memory footprint acceptable, or should we stream counts to disk or recompute on demand?
+4. Mo’s Algorithm on Trees
+   • If answering many queries with different `k`, consider Euler Tour +
+     Mo’s algorithm. Beneficial only when the number of queries is large.
 
-Use these questions as a checklist the next time you revisit or rewrite the solution.
+5. APSP Overhead
+   • All-pairs shortest paths on a tree is `O(n²)` and typically unnecessary
+     unless multiple distance-based queries must be answered frequently.
+
+6. Bridge Choice Logic
+   • Evaluate whether selecting the global `(k-1)` max in Tree B is always
+     optimal. A proof-by-contradiction can settle correctness assumptions.
+
+7. Space vs. Time
+   • Current memory footprint is `O((n + m)·k)`. Determine whether this is
+     acceptable or if streaming / recomputation trade-offs are preferable.
+
+Use these points as a reference when refining clarity, efficiency, and
+maintainability of the code.
 """
