@@ -1,0 +1,73 @@
+---
+interface Props {
+  imageUrl: string;
+  K: number; // Total number of steps/revisions (e.g., 80)
+  p: number; // Current step (e.g., 15)
+  size?: number;
+  rows?: number;
+  cols?: number;
+}
+
+const {
+  imageUrl,
+  K,
+  p,
+  size = 200,
+  rows = 10,
+  cols = 10,
+} = Astro.props;
+
+const totalTiles = rows * cols;
+const cellSize = size / cols;
+
+// Clamp K to be at most the total number of tiles
+const clampedK = Math.max(0, Math.min(K, totalTiles));
+// Clamp p to be at most the clamped total K
+const clampedP = Math.max(0, Math.min(p, clampedK));
+
+const gridStyles = [
+  `display: grid`,
+  `grid-template-columns: repeat(${cols}, 1fr)`,
+  `width: ${size}px`,
+  `height: ${size}px`,
+].join('; ');
+
+const tiles = Array.from({ length: totalTiles }).map((_, idx) => {
+  let tileClass = 'w-full aspect-square';
+  let tileStyle = '';
+
+  if (idx < clampedP) {
+    // This tile is revealed
+    const r = Math.floor(idx / cols);
+    const c = idx % cols;
+    const bgX = -c * cellSize;
+    const bgY = -r * cellSize;
+
+    tileStyle = [
+      `background-image: url(${imageUrl})`,
+      `background-size: ${size}px ${size}px`,
+      `background-position: ${bgX}px ${bgY}px`,
+    ].join('; ');
+  } else if (idx < clampedK) {
+    // This tile is a "ghost" (part of the plan, but not yet done)
+    // Dark theme styles:
+    tileClass += ' bg-slate-800 border border-slate-700';
+  } else {
+    // This tile is empty (beyond the scope of K)
+    tileClass += ' bg-transparent';
+  }
+  return { class: tileClass, style: tileStyle };
+});
+---
+
+<div
+  role="img"
+  aria-label={`Puzzle progress: ${clampedP} of ${clampedK} steps complete.`}
+  style={gridStyles}
+>
+  {
+    tiles.map(({ class: tileClass, style: tileStyle }) => (
+      <div class={tileClass} style={tileStyle} />
+    ))
+  }
+</div>

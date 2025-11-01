@@ -1,0 +1,37 @@
+[
+    {
+        "id": 23,
+        "title": "Merge k Sorted Lists",
+        "languages": ["Python"]
+    },
+    {
+        "id": 52,
+        "title": "N-Queens II",
+        "languages": ["Python"] 
+    },
+    {
+        "id": 73,
+        "title": "Set Matrix Zeroes",
+        "languages": ["Python"]
+    },
+    {
+        "id": 135,
+        "title": "Candy",
+        "languages": ["Python"]
+    },
+    {
+        "id": 440,
+        "title": "K-th Smallest in Lexicographical Order",
+        "languages": ["Python"]
+    },
+    {
+        "id": 673,
+        "title": "Number of Longest Increasing Subsequence",
+        "languages": ["Python"]
+    },
+    {
+        "id": 3372,
+        "title": "Maximize the Number of Target Nodes After Connecting Trees I",
+        "languages": ["Python"]
+    }
+]

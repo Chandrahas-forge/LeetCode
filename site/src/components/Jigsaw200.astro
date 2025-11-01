@@ -1,0 +1,85 @@
+---
+import {
+  buildEdgeMap,
+  piecePath,
+  getProgressiveRevealSet, // Changed import
+} from '../lib/jigsaw.ts';
+
+// MODIFIED: Props have changed
+interface Props {
+  src: string;
+  K: number; // Total pieces in the "work scope"
+  p: number; // Pieces completed
+  seed?: number;
+}
+
+const { src, K, p, seed = 42 } = Astro.props;
+
+const ROWS = 10;
+const COLS = 10;
+const W = 200;
+const H = 200;
+const pieceW = W / COLS;
+const pieceH = H / ROWS;
+
+const edges = buildEdgeMap(ROWS, COLS, seed);
+
+const pieces = [];
+for (let r = 0; r < ROWS; r++) {
+  for (let c = 0; c < COLS; c++) {
+    const idx = r * COLS + c;
+    const d = piecePath(r, c, edges, pieceW, pieceH);
+    pieces.push({ idx, d });
+  }
+}
+
+// MODIFIED: New reveal logic
+const shownIndices = getProgressiveRevealSet(ROWS, COLS, K, p, seed);
+const revealCount = shownIndices.size;
+---
+
+<svg
+  width={W}
+  height={H}
+  viewBox={`0 0 ${W} ${H}`}
+  role="img"
+  aria-label={`Jigsaw puzzle progress: ${revealCount} of 100 pieces revealed.`}
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <defs>
+    <image
+      id="img200"
+      href={src}
+      x="0"
+      y="0"
+      width={W}
+      height={H}
+      preserveAspectRatio="xMidYMid slice"
+    />
+    {
+      pieces.map((p) => (
+        <clipPath id={`clip-${seed}-${p.idx}`}>
+          <path d={p.d} />
+        </clipPath>
+      ))
+    }
+  </defs>
+
+  {
+    pieces.map((p) => (
+      <g
+        clip-path={`url(#clip-${seed}-${p.idx})`}
+        opacity={shownIndices.has(p.idx) ? 1 : 0}
+        class="transition-opacity duration-300"
+      >
+        <use href="#img200" />
+        <path
+          d={p.d}
+          fill="none"
+          stroke="#94a3b8"
+          stroke-width="0.8"
+        />
+      </g>
+    ))
+  }
+</svg>

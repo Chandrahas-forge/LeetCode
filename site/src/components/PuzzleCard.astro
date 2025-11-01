@@ -1,0 +1,38 @@
+---
+import PuzzleRowReveal from './PuzzleRowReveal.astro';
+
+interface Props {
+  title: string;
+  imageUrl: string;
+  K: number; // Total revisions
+  p: number; // Completed revisions
+}
+
+const { title, imageUrl, K, p } = Astro.props;
+const progressPercent = K > 0 ? (p / K) * 100 : 0;
+---
+
+<div
+  class="max-w-xs rounded-lg border border-slate-700 bg-slate-900 shadow-md overflow-hidden"
+>
+  <PuzzleRowReveal imageUrl={imageUrl} K={K} p={p} size={200} />
+  <div class="p-4">
+    <h3 class="text-lg font-semibold text-slate-100">{title}</h3>
+    <p class="text-sm text-slate-400 mb-2">
+      Progress: {p} / {K}
+    </p>
+    <div
+      class="w-full bg-slate-700 rounded-full h-2.5"
+      role="progressbar"
+      aria-valuenow={p}
+      aria-valuemin="0"
+      aria-valuemax={K}
+    >
+      <div
+        class="bg-emerald-500 h-2.5 rounded-full"
+        style={`width: ${progressPercent}%`}
+      >
+      </div>
+    </div>
+  </div>
+</div>

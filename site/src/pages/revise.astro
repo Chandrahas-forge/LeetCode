@@ -1,0 +1,165 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import fs from "node:fs";
+import path from "node:path";
+import {
+  buildEdgeMap,
+  piecePath,
+  getProgressiveRevealSet,
+} from "../lib/jigsaw.ts";
+import allRevisions from "../data/revisions.json";
+
+// --- 1. Load All Available Images ---
+const imageDir = path.join(process.cwd(), "public/revision_images");
+const basePath = import.meta.env.BASE_URL;
+const allImageFiles = fs
+  .readdirSync(imageDir)
+  .filter((name) => !name.startsWith("."));
+const allImagePaths = allImageFiles.map(
+  (name) => `${basePath}/revision_images/${name}`,
+);
+
+// --- 2. Define Jigsaw Constants ---
+const ROWS = 10;
+const COLS = 10;
+const W = 200;
+const H = 200;
+const pieceW = W / COLS;
+const pieceH = H / ROWS; 
+// --- 3. Process Each Revision to Get Puzzle Data ---
+const revisionData = allRevisions.map((rev) => {
+  // If 'revisions.json' has an entry missing "id",
+  // 'id' will be undefined here and cause errors.
+  const { id, title, language, ext, problemIds, startedAt } = rev;
+
+  // --- 4. Automatically Calculate K and p ---
+  const K = problemIds.length;
+  let p = 0;
+  const revFileName = `rev_${id}.${ext}`;
+
+  for (const probId of problemIds) {
+    const solutionPath = path.join(
+      process.cwd(),
+      "solutions",
+      language,
+      String(probId), // Use String() to handle integer IDs
+      revFileName,
+    );
+    if (fs.existsSync(solutionPath)) {
+      p++;
+    }
+  }
+
+  // --- 5. Deterministically Assign Seed & Image ---
+  const seed = parseInt(id, 10);
+  const imageSrc = allImagePaths.length
+    ? allImagePaths[(seed - 1) % allImagePaths.length]
+    : "/default-image.png";
+
+  // --- 6. Generate Jigsaw SVG Data ---
+  const edges = buildEdgeMap(ROWS, COLS, seed);
+  const pieces = [];
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const idx = r * COLS + c;
+      const d = piecePath(r, c, edges, pieceW, pieceH);
+      pieces.push({ idx, d });
+    }
+  }
+  const shownIndices = getProgressiveRevealSet(ROWS, COLS, K, p, seed);
+  const revealCount = shownIndices.size;
+
+  return {
+    id,
+    title,
+    K,
+    p,
+    seed,
+    imageSrc,
+    pieces,
+    shownIndices,
+    revealCount,
+  };
+});
+---
+
+<BaseLayout title="Revisions">
+  <h1 class="text-3xl font-bold mb-6 text-slate-100">Revisions</h1>
+  <p class="text-slate-400 mb-8 max-w-xl">
+    Your revision progress, visualized. Progress is updated automatically
+    when you add  files to your solution folders.
+  </p>
+
+  <div class="flex flex-wrap gap-8">
+    {
+      revisionData.map((data) => (
+        <a
+          href={`${basePath}/revise/${data.id}`}
+          class="block max-w-xs rounded-lg border border-slate-700 bg-slate-900 shadow-md overflow-hidden hover:border-emerald-500 transition-colors"
+          title={`View revision: ${data.title}`}
+        >
+          <svg
+            width={W}
+            height={H}
+            viewBox={`0 0 ${W} ${H}`}
+            role="img"
+            aria-label={`Jigsaw puzzle progress: ${data.revealCount} of 100 pieces revealed.`}
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <defs>
+              <image
+                id={`img-${data.seed}`}
+                href={data.imageSrc}
+                x="0"
+                y="0"
+                width={W}
+                height={H}
+                preserveAspectRatio="xMidYMid slice"
+              />
+              {data.pieces.map((p) => (
+                <clipPath id={`clip-${data.seed}-${p.idx}`}>
+                  <path d={p.d} />
+                </clipPath>
+              ))}
+            </defs>
+            {data.pieces.map((p) => (
+              <g
+                clip-path={`url(#clip-${data.seed}-${p.idx})`}
+                opacity={data.shownIndices.has(p.idx) ? 1 : 0}
+                class="transition-opacity duration-300"
+              >
+                <use href={`#img-${data.seed}`} />
+                <path
+                  d={p.d}
+                  fill="none"
+                  stroke="#94a3b8"
+                  stroke-width="0.8"
+                />
+              </g>
+            ))}
+          </svg>
+          <div class="p-4">
+            <h3 class="text-lg font-semibold text-slate-100 truncate">
+              {data.title}
+            </h3>
+            <p class="text-sm text-slate-400 mb-2">
+              Progress: {data.p} / {data.K}
+            </p> <div
+              class="w-full bg-slate-700 rounded-full h-2.5"
+              role="progressbar"
+              aria-valuenow={data.p}
+              aria-valuemin="0"
+              aria-valuemax={data.K}
+            >
+              <div
+                class="bg-emerald-500 h-2.5 rounded-full"
+                style={`width: ${data.K > 0 ? (data.p / data.K) * 100 : 0}%`}
+              >
+              </div>
+            </div>
+          </div>
+        </a>
+      ))
+    }
+  </div>
+</BaseLayout>

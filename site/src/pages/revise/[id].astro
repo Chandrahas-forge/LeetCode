@@ -1,0 +1,186 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import fs from "node:fs";
+import path from "node:path";
+import {
+  buildEdgeMap,
+  piecePath,
+  getProgressiveRevealSet,
+} from "../../lib/jigsaw.ts";
+import allRevisions from "../../data/revisions.json";
+console.log(allRevisions);
+
+// --- THIS IS THE NEW, REQUIRED FUNCTION ---
+export async function getStaticPaths() {
+  // Loop over all your revisions and create a "params" object for each one.
+  return allRevisions.map((rev) => {
+    return {
+      params: { id: rev.id },
+    };
+  });
+}
+// --- END OF NEW FUNCTION ---
+
+// --- 1. Get ID and BasePath ---
+// Astro.params is now available thanks to getStaticPaths
+const { id: revisionId } = Astro.params;
+console.log("Revision ID:", revisionId);
+const basePath = import.meta.env.BASE_URL;
+
+// --- 2. Find the matching revision ---
+// We can be sure 'rev' exists because getStaticPaths is our source of truth
+const rev = allRevisions.find((r) => String(r.id) === revisionId)!;
+console.log("Revision Data:", rev);
+// --- 3. Handle not found ---
+// This 'if' block is actually no longer needed,
+// since getStaticPaths guarantees the 'rev' exists.
+// if (!rev) {
+//   return Astro.redirect(`${basePath}/`);
+// }
+
+// --- 4. Load All Available Images ---
+const imageDir = path.join(process.cwd(), "public/revision_images");
+const allImageFiles = fs
+  .readdirSync(imageDir)
+  .filter((name) => !name.startsWith("."));
+const allImagePaths = allImageFiles.map(
+  (name) => `${basePath}/revision_images/${name}`,
+);
+
+// --- 5. Define Jigsaw Constants (Bigger for detail page) ---
+const W = 400; // Width
+const H = 400; // Height
+const ROWS = 10;
+const COLS = 10;
+const pieceW = W / COLS;
+const pieceH = H / ROWS;
+
+// --- 6. Process This Revision (Same logic as index) ---
+const { id, title, language, ext, problemIds, startedAt } = rev;
+const K = problemIds.length;
+let p = 0;
+const revFileName = `rev_${id}.${ext}`;
+
+for (const probId of problemIds) {
+  const solutionPath = path.join(
+    process.cwd(),
+    "solutions",
+    language,
+    String(probId),
+    revFileName,
+  );
+  if (fs.existsSync(solutionPath)) {
+    p++;
+  }
+}
+
+// --- 7. Deterministically Assign Seed & Image ---
+const seed = parseInt(id, 10);
+const imageSrc = allImagePaths.length
+  ? allImagePaths[(seed - 1) % allImagePaths.length]
+  : `${basePath}/default-image.png`;
+
+// --- 8. Generate Jigsaw SVG Data ---
+const edges = buildEdgeMap(ROWS, COLS, seed);
+const pieces = [];
+for (let r = 0; r < ROWS; r++) {
+  for (let c = 0; c < COLS; c++) {
+    const idx = r * COLS + c;
+    const d = piecePath(r, c, edges, pieceW, pieceH);
+    pieces.push({ idx, d });
+  }
+}
+const shownIndices = getProgressiveRevealSet(ROWS, COLS, K, p, seed);
+const revealCount = shownIndices.size;
+
+// --- 9. Prep data for template ---
+const data = {
+  id,
+  title,
+  K,
+  p,
+  seed,
+  imageSrc,
+  pieces,
+  shownIndices,
+  revealCount,
+};
+---
+
+<BaseLayout title={data.title}>
+  <div class="flex flex-col  gap-8 lg:gap-12">
+    <div class="flex-shrink-0">
+      <svg
+        width={W}
+        height={H}
+        viewBox={`0 0 ${W} ${H}`}
+        role="img"
+        aria-label={`Jigsaw puzzle progress: ${data.revealCount} of 100 pieces revealed.`}
+        xmlns="http://www.w3.org/2000/svg"
+        class="rounded-lg border border-slate-700 w-full max-w-sm md:max-w-md mx-auto"
+      >
+        <defs>
+          <image
+            id={`img-${data.seed}`}
+            href={data.imageSrc}
+            x="0"
+            y="0"
+            width={W}
+            height={H}
+            preserveAspectRatio="xMidYMid slice"
+          />
+          {data.pieces.map((p) => (
+            <clipPath id={`clip-${data.seed}-${p.idx}`}>
+              <path d={p.d} />
+            </clipPath>
+          ))}
+        </defs>
+        {data.pieces.map((p) => (
+          <g
+            clip-path={`url(#clip-${data.seed}-${p.idx})`}
+            opacity={data.shownIndices.has(p.idx) ? 1 : 0}
+            class="transition-opacity duration-300"
+          >
+            <use href={`#img-${data.seed}`} />
+            <path
+              d={p.d}
+              fill="none"
+              stroke="#94a3b8"
+              stroke-width="0.8"
+            />
+          </g>
+        ))}
+      </svg>
+    </div>
+
+    <div class="flex-grow">
+      <h1 class="text-3xl font-bold mb-4 text-slate-100">{data.title}</h1>
+
+      <p class="text-lg text-slate-400 mb-4">
+        Progress: {data.p} / {data.K} problems completed
+      </p>
+
+      <div
+        class="w-full bg-slate-700 rounded-full h-4 mb-6"
+        role="progressbar"
+        aria-valuenow={data.p}
+        aria-valuemin="0"
+        aria-valuemax={data.K}
+      >
+        <div
+          class="bg-emerald-500 h-4 rounded-full"
+          style={`width: ${data.K > 0 ? (data.p / data.K) * 100 : 0}%`}
+        >
+        </div>
+      </div>
+
+      <h2 class="text-xl font-semibold text-slate-200 mb-2">Details</h2>
+      <ul class="text-slate-400 space-y-1">
+        <li><strong>Total Problems:</strong> {data.K}</li>
+        <li><strong>Problems Solved:</strong> {data.p}</li>
+        <li><strong>Pieces Revealed:</strong> {data.revealCount} / 100</li>
+        <li><strong>Revision ID:</strong> {data.id}</li>
+      </ul>
+    </div>
+  </div>
+</BaseLayout>

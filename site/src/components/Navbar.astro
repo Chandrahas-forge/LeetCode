@@ -1,0 +1,26 @@
+---
+export interface NavLink {
+  href: string;
+  label: string;
+  external?: boolean;
+}
+
+const { links = [] }: { links: NavLink[] } = Astro.props;
+---
+
+<nav class="w-full py-4 border-b border-slate-800">
+  <ul class="flex justify-center gap-8 text-lg">
+    {links.map((l) => (
+      <li>
+        <a
+          href={l.href}
+          target={l.external ? "_blank" : undefined}
+          rel={l.external ? "noopener" : undefined}
+          class="hover:text-emerald-400 transition"
+        >
+          {l.label}
+        </a>
+      </li>
+    ))}
+  </ul>
+</nav>
