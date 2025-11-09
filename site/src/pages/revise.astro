@@ -38,13 +38,16 @@ const revisionData = allRevisions.map((rev) => {
   const revFileName = `rev_${id}.${ext}`;
 
   for (const probId of problemIds) {
+    // site/ is current working dir during build; solutions/ is at repo root -> go up one level
     const solutionPath = path.join(
       process.cwd(),
+      "..",               // move out of site/ to repo root
       "solutions",
       language,
-      String(probId), // Use String() to handle integer IDs
+      String(probId),
       revFileName,
     );
+    console.log("checking:", solutionPath);
     if (fs.existsSync(solutionPath)) {
       p++;
     }

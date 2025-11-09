@@ -62,8 +62,10 @@ let p = 0;
 const revFileName = `rev_${id}.${ext}`;
 
 for (const probId of problemIds) {
+  // site/ is current working dir during build; solutions/ lives at repo root
   const solutionPath = path.join(
     process.cwd(),
+    "..",               // move out of site/ to repo root
     "solutions",
     language,
     String(probId),
